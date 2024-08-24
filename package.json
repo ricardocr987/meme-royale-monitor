@@ -2,11 +2,16 @@
   "name": "meme-royale-monitor",
   "version": "1.0.50",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts",
+    "start": "NODE_ENV=production bun src/index.ts",
+    "test": "bun test"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@memeroyale/memeroyale-sdk": "^0.1.2",
+    "@types/bs58": "^4.0.4",
+    "firebase-admin": "^12.3.1",
+    "ky": "^1.7.1"
   },
   "devDependencies": {
     "bun-types": "latest"
