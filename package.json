@@ -9,11 +9,15 @@
   },
   "dependencies": {
     "@memeroyale/memeroyale-sdk": "^0.1.2",
+    "@solana/rpc-spec-types": "^2.0.0-experimental.12ae1c6",
     "@types/bs58": "^4.0.4",
+    "cacheable-lookup": "^7.0.0",
     "firebase-admin": "^12.3.1",
-    "ky": "^1.7.1"
+    "ky": "^1.7.1",
+    "luxon": "^3.5.0"
   },
   "devDependencies": {
+    "@types/luxon": "^3.4.2",
     "bun-types": "latest"
   },
   "module": "src/index.js"

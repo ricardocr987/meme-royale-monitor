@@ -1,8 +1,9 @@
-import { Connection, Keypair } from "@solana/web3.js";
+import { Keypair } from "@solana/web3.js";
+import { SolanaClient } from "./solana";
 
 export const config = {
     RPC_KEY: Bun.env.RPC_KEY || '',
-    RPC: new Connection(`https://mainnet.helius-rpc.com/?api-key=${Bun.env.RPC_KEY}`),
+    RPC: new SolanaClient(`https://mainnet.helius-rpc.com/?api-key=${Bun.env.RPC_KEY}`),
     SOLANA_KEYPAIR: Keypair.fromSecretKey(Uint8Array.from(JSON.parse(Bun.env.SOLANA_SECRET!))),
 
     FIREBASE_PROJECT_ID: Bun.env.FIREBASE_PROJECT_ID,

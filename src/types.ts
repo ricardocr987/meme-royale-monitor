@@ -44,7 +44,8 @@ export type VersionedTransaction = {
 export type Event = {
     signature: string;
     type: string;
-    signer: string;
+    timestamp: number;
+    signers: string[];
     data: any;
     accounts: string[];
 };
