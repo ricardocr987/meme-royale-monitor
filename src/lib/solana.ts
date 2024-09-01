@@ -97,16 +97,9 @@ export class SolanaClient extends Connection {
 
         try {
             if (payload.method === 'getTransaction') {
-                let batch = payload.params[0].map((item: any) => ({
+                const batch = payload.params[0].map((item: any) => ({
                     methodName: payload.method,
-                    args: [
-                        item,
-                        {
-                            commitment: 'confirmed',
-                            encoding: 'jsonParsed',
-                            maxSupportedTransactionVersion: 0,
-                        },
-                    ],
+                    args: [item, payload.params[1]],
                 }));
 
                 const response = await (config.RPC as any)._rpcBatchRequest(batch);
@@ -140,11 +133,34 @@ export class SolanaClient extends Connection {
         try {
             return await this.rpcRequest<ParsedTransactionWithMeta[]>({
                 method: 'getTransaction',
-                params: [signatures, { commitment: 'finalized', encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]
+                params: [signatures, { commitment: 'confirmed', encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]
             });
         } catch (error) {
             console.error('getBatchTransactions error:', error);
             throw error;
         }
+    }
+
+    async getConfirmation(
+        signature: string,
+        maxRetries: number = 10,
+        retryDelay: number = 2000
+    ): Promise<string | null> {
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            const result = await this.getSignatureStatus(signature, {
+                searchTransactionHistory: true,
+            });
+            const status = result.value?.confirmationStatus;
+        
+            if (status === 'confirmed' || status === 'finalized') {
+                return status;
+            }
+        
+            console.log(`Attempt ${attempt + 1}: Transaction not yet confirmed. Retrying...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+      
+        console.error(`Transaction not confirmed after ${maxRetries} attempts.`);
+        return null;
     }
 }

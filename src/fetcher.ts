@@ -1,33 +1,32 @@
 import { MEMEROYALE_PROGRAM_ID, SOL_DECIMALS, SOL_MINT } from "./lib/constants";
 import { Parser } from "./parser";
-import { AccountListener } from "./accountListener";
 import { PublicKey, ParsedTransactionWithMeta } from "@solana/web3.js";
 import { config } from "./lib/config";
 import ky from "ky";
-import { JupQuote, ParsedMint, TokenData, WealthData } from "./types";
+import { JupQuote, ParsedMint, TokenData, User, WealthData } from "./types";
 import BigNumber from "bignumber.js";
 import { AccountLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Database } from "./lib/db";
 
 export class Fetcher {
     private parser!: Parser;
-    private accountListener!: AccountListener;
     private readonly db: Database;
     private static readonly MAX_BATCH_SIZE = 100;
     private static readonly PRICE_URL = "https://price.jup.ag/v6/price";
     private static readonly VS_TOKEN = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+    private refreshInterval: Timer | null = null;
 
     constructor(db: Database) {
         this.db = db;
     }
 
     public async init(): Promise<void> {
-        this.accountListener = new AccountListener(this.parser);
-        this.accountListener.init(MEMEROYALE_PROGRAM_ID);
-        await this.events(MEMEROYALE_PROGRAM_ID);
+        await this.history(MEMEROYALE_PROGRAM_ID);
+
+        this.startRefreshHoldersInterval();
     }
 
-    public async events(account: string): Promise<void> {
+    public async history(account: string): Promise<void> {
         const pubkey = new PublicKey(account);
         await this.transactions(pubkey, async (transactions) => {
             await this.parser.parseTransactions(transactions);
@@ -73,6 +72,35 @@ export class Fetcher {
         return { wealth: totalWealth.toString(16), tokens };
     }
 
+    private startRefreshHoldersInterval(): void {
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+        }
+        this.refreshInterval = setInterval(() => this.refreshHoldersInterval(), 1800000);
+        this.refreshHoldersInterval();
+    }
+
+    private async refreshHoldersInterval(): Promise<void> {
+        try {
+            const users = await this.db.getUsers();
+            const updatedUsers: User[] = [];
+
+            for (const [address] of Object.entries(users)) {
+                try {
+                    const publicKey = new PublicKey(address);
+                    const wealthData = await this.getUserWealth(publicKey);
+                    updatedUsers.push({ address, ...wealthData });
+                } catch (error) {
+                    console.error(`Error updating wealth data for user ${address}:`, error);
+                }
+            }
+
+            await this.db.saveUsers(updatedUsers);
+            console.log('Finished refreshing holders wealth data');
+        } catch (error) {
+            console.error('Error in refreshHoldersInterval:', error);
+        }
+    }
     private async filterExistingSignatures(signatures: string[]): Promise<string[]> {
         const existenceChecks = signatures.map(signature => this.db.signatureExists(signature));
         const existenceResults = await Promise.all(existenceChecks);
@@ -170,7 +198,7 @@ export class Fetcher {
         batchProcessor: (transactions: ParsedTransactionWithMeta[]) => Promise<string | undefined | void>
     ): Promise<string | undefined> {
         let before: string | undefined;
-        const limit = 1;
+        const limit = 10;
 
         while (true) {
             const signatures = await config.RPC.getSignatures(pubkey, { before, limit });

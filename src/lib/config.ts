@@ -2,6 +2,9 @@ import { Keypair } from "@solana/web3.js";
 import { SolanaClient } from "./solana";
 
 export const config = {
+    HOST: Bun.env.HOST || '127.0.0.1',
+    PORT: Bun.env.PORT || 3000,
+
     RPC_KEY: Bun.env.RPC_KEY || '',
     RPC: new SolanaClient(`https://mainnet.helius-rpc.com/?api-key=${Bun.env.RPC_KEY}`),
     SOLANA_KEYPAIR: Keypair.fromSecretKey(Uint8Array.from(JSON.parse(Bun.env.SOLANA_SECRET!))),

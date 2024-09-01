@@ -74,3 +74,79 @@ export type ParsedTransaction = {
     accounts: Account[];
     users: User[];
 };
+
+// PROGRAM LISTENER:
+
+interface UiTokenAmount {
+    amount: string;
+    decimals: number;
+    uiAmount: number;
+    uiAmountString: string;
+}
+
+interface PostTokenBalances {
+    accountIndex: number;
+    mint: string;
+    owner: string;
+    programId: string;
+    uiTokenAmount: UiTokenAmount;
+}
+
+interface Meta {
+    err: null | any;
+    fee: number;
+    innerInstructions: InnerInstruction[];
+    loadedAddresses: {
+        readonly: any[];
+        writable: any[];
+    };
+    logMessages: string[];
+    postBalances: number[];
+    postTokenBalances: PostTokenBalances[];
+    preBalances: number[];
+    preTokenBalances: PostTokenBalances[];
+    rewards: any[];
+}
+
+interface Instruction2 {
+    accounts: number[];
+    data: string;
+    programIdIndex: number;
+}
+
+interface InnerInstruction {
+    index: number;
+    instructions: Instruction2[];
+}
+
+interface Message {
+    accountKeys: string[];
+    addressTableLookups: any[];
+    header: {
+        numReadonlySignedAccounts: number;
+        numReadonlyUnsignedAccounts: number;
+        numRequiredSignatures: number;
+    };
+    instructions: Instruction[];
+    recentBlockhash: string;
+}
+
+interface Instruction {
+    accounts: number[];
+    data: string;
+    programIdIndex: number;
+}
+
+interface Transaction {
+    message: Message;
+    signatures: string[];
+}
+
+export interface BodyRequest {
+    blockTime: number;
+    indexWithinBlock: number;
+    meta: Meta;
+    slot: number;
+    transaction: Transaction;
+    version: number;
+}

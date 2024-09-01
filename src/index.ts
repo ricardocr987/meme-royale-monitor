@@ -6,11 +6,19 @@ import { Parser } from "./parser";
 import { BorshCoder, Wallet } from "@coral-xyz/anchor";
 import { Fetcher } from "./fetcher";
 import { Database } from "./lib/db";
+import Elysia from "elysia";
+import { ProgramListener } from "./programListener";
+
+type ListenOptions = {
+    hostname: string;
+    port: number;
+}
 
 class MonitorService {
     private parser: Parser;
     private fetcher: Fetcher;
     private db: Database;
+    private listener: ProgramListener;
   
     constructor() {
         const programId = new PublicKey(MEMEROYALE_PROGRAM_ID);
@@ -19,27 +27,29 @@ class MonitorService {
         const coder = new BorshCoder(sdk.program.idl);
 
         this.db = new Database();
-        
         this.parser = new Parser(this.db, coder);
         this.fetcher = new Fetcher(this.db);
     
         Object.assign(this.parser, { fetcher: this.fetcher });
         Object.assign(this.fetcher, { parser: this.parser });
+
+        this.listener = new ProgramListener(this.parser);
     }
     
     async init() {
         await this.fetcher.init();
     }
-}
 
-async function main() {
-    try {
-        const monitor = new MonitorService();
-        await monitor.init();
-    } catch (error) {
-        console.error("Application failed:", error);
-        process.exit(1);
+    getListenerHandler() {
+        return this.listener.getHandler();
     }
 }
 
-main();
+const monitor = new MonitorService();
+
+new Elysia()
+    .use(monitor.getListenerHandler())
+    .listen({ hostname: config.HOST, port: config.PORT }, async ({ hostname, port }: ListenOptions) => {
+        console.log(`Running at http://${hostname}:${port}`);
+        await monitor.init();
+    });

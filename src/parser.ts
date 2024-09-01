@@ -23,14 +23,16 @@ import {
     ParsedMint, 
     Mint 
 } from "./types";
+import{ IDL as dlmm } from '@meteora-ag/dlmm'
 
 export class Parser {
-    private readonly coder: BorshCoder;
     private fetcher!: Fetcher;
+    private readonly memeCoder: BorshCoder;
+    private readonly dlmmCoder: BorshCoder = new BorshCoder(dlmm);
     private readonly db: Database;
 
     constructor(db: Database, coder: BorshCoder) {
-        this.coder = coder;
+        this.memeCoder = coder;
         this.db = db;
     }
 
@@ -71,6 +73,7 @@ export class Parser {
 
         const parsedTransaction = { events, accounts, users };
         await this.db.saveTransaction(parsedTransaction);
+
         return parsedTransaction;
     }
 
@@ -81,7 +84,7 @@ export class Parser {
         timestamp: number
     ): Promise<Event | null> {
         try {
-            const decodedInstruction = this.coder.instruction.decode(
+            const decodedInstruction = this.memeCoder.instruction.decode(
                 bs58.decode(instruction.data),
                 "base58"
             );
@@ -100,13 +103,10 @@ export class Parser {
         }
     }
     
-    private async parseAccount(
-        instruction: ParsedInstruction,
-    ): Promise<Account | undefined> {
+    private async parseAccount(instruction: ParsedInstruction): Promise<Account | undefined> {
         if (instruction.parsed.type !== 'createAccount' || instruction.program !== 'system') return;
 
         const address = instruction.parsed.info.newAccount;
-
         try {
             const accountInfo = await config.RPC.getAccountInfo(new PublicKey(address));
             if (!accountInfo) return;
@@ -114,7 +114,7 @@ export class Parser {
             const discriminator = accountInfo.data.slice(0, 8).toString('hex');
             const accountName = accountDiscriminators[discriminator];
             if (accountName) {
-                const deserializedAccount = this.coder.accounts.decode(
+                const deserializedAccount = this.memeCoder.accounts.decode(
                     accountName.charAt(0).toLowerCase() + accountName.slice(1), 
                     accountInfo.data
                 );
@@ -129,6 +129,9 @@ export class Parser {
             } else if (accountInfo.owner.equals(TOKEN_PROGRAM_ID)) {
                 const mintData = await this.parseMint(address, accountInfo.data);
                 await this.db.saveMeme(mintData);
+            } else if (accountInfo.owner.equals(TOKEN_PROGRAM_ID)) {
+                const data = this.dlmmCoder.accounts.decodeAny(accountInfo.data);
+                console.log('meteora data:', data)
             }
         } catch (error: any) {
             console.error('Error parsing account:', address, error.message);
@@ -139,10 +142,7 @@ export class Parser {
 
     public async parseMint(mint: string, data: Buffer): Promise<ParsedMint> {
         const decoded: Mint = MintLayout.decode(data);
-        const mintData = this.normalizeData({
-            mint,
-            ...decoded
-        });
+        const mintData = this.normalizeData({ mint, ...decoded});
         await this.db.saveMint(mintData);
 
         return mintData;
@@ -159,7 +159,7 @@ export class Parser {
             }
         }));
     
-        return parsedUsers.filter((user): user is User => user !== null);
+        return parsedUsers.filter((user): user is User => user !== null && user.tokens.length > 0);
     }
 
     private normalizeData(data: any): any {

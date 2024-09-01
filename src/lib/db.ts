@@ -4,7 +4,7 @@ import { config } from "./config";
 import { ParsedTransaction, Account, User, Event, ParsedMint } from "../types";
 
 export class Database {
-    private database: admin.database.Database;
+    public database: admin.database.Database;
 
     constructor() {
         const app = admin.apps.find((it: any) => it?.name === "[DEFAULT]") ||
@@ -65,6 +65,17 @@ export class Database {
         await mintRef.set(mintData);
     }
 
+    public async getUsers(): Promise<Record<string, User>> {
+        try {
+            const usersRef = this.database.ref('users');
+            const snapshot = await usersRef.once('value');
+            return snapshot.val() || {};
+        } catch (error) {
+            console.error("Failed to get users:", error);
+            throw error;
+        }
+    }
+
     private async saveEvents(events: Event[]): Promise<void> {
         const savePromises = events.map(event => {
             const eventRef = this.database.ref(`events/${event.type}/${event.signature}`);
@@ -82,7 +93,7 @@ export class Database {
         await Promise.all(savePromises);
     }
 
-    private async saveUsers(users: User[]): Promise<void> {
+    public async saveUsers(users: User[]): Promise<void> {
         const usersRef = this.database.ref('users');
         const savePromises = users.map(user => {
             const userRef = usersRef.child(user.address);

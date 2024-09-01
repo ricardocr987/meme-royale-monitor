@@ -9,9 +9,11 @@
   },
   "dependencies": {
     "@memeroyale/memeroyale-sdk": "^0.1.2",
+    "@meteora-ag/dlmm": "^1.1.4",
     "@solana/rpc-spec-types": "^2.0.0-experimental.12ae1c6",
     "@types/bs58": "^4.0.4",
     "cacheable-lookup": "^7.0.0",
+    "elysia": "^1.1.11",
     "firebase-admin": "^12.3.1",
     "ky": "^1.7.1",
     "luxon": "^3.5.0"
